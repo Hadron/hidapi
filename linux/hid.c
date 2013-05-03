@@ -78,7 +78,27 @@ struct hid_device_ {
 };
 
 
-static __u32 kernel_version = 0;
+const static __u32 KERNEL_VERSION_UNINITIALIZED = 0xffffffff; 
+const static __u32 KERNEL_VERSION_UNKNOWN = 0xfffffffe; 
+static __u32 kernel_version = 0xfffffffe;
+
+static __u32 detect_kernel_version(void)
+{
+	struct utsname name;
+	int major, minor, release;
+	int ret;
+	uname(&name);
+	ret = sscanf(name.release, "%d.%d.%d", &major, &minor, &release);
+	if (ret == 3) {
+		return major << 16 | minor << 8 | release;
+	}
+	ret = sscanf(name.release, "%d.%d", &major, &minor);
+	if (ret == 2) {
+		return major << 16 | minor << 8 | 0x0;
+	}
+	printf("Couldn't sscanf() version string %s\n", name.release);
+	return KERNEL_VERSION_UNKNOWN;
+}
 
 static hid_device *new_hid_device(void)
 {
@@ -600,18 +620,10 @@ hid_device * HID_API_EXPORT hid_open_path(const char *path)
 
 	dev = new_hid_device();
 
-	if (kernel_version == 0) {
-		struct utsname name;
-		int major, minor, release;
-		int ret;
-		uname(&name);
-		ret = sscanf(name.release, "%d.%d.%d", &major, &minor, &release);
-		if (ret == 3) {
-			kernel_version = major << 16 | minor << 8 | release;
+	if (kernel_version == KERNEL_VERSION_UNINITIALIZED) {
+		kernel_version = detect_kernel_version();
+		if (kernel_version != KERNEL_VERSION_UNKNOWN) {
 			//printf("Kernel Version: %d\n", kernel_version);
-		}
-		else {
-			printf("Couldn't sscanf() version string %s\n", name.release);
 		}
 	}
 
@@ -700,6 +712,7 @@ int HID_API_EXPORT hid_read_timeout(hid_device *dev, unsigned char *data, size_t
 		bytes_read = 0;
 
 	if (bytes_read >= 0 &&
+	    kernel_version != KERNEL_VERSION_UNKNOWN &&
 	    kernel_version < KERNEL_VERSION(2,6,34) &&
 	    dev->uses_numbered_reports) {
 		/* Work around a kernel bug. Chop off the first byte. */
