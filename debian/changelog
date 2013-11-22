@@ -1,4 +1,10 @@
-hidapi (0.7.0+git20130909.a88c724-1~precise) unstable; urgency=low
+hidapi (0.8.0~rc1-1) unstable; urgency=low
+
+  * Better Linux version detection (https://github.com/signal11/hidapi/pull/122).
+  
+ -- Klee Dienes <klee@mit.edu>  Thu, 21 Nov 2013 17:13:59 -0500
+
+hidapi (0.7.0+git20130909.a88c724-1) unstable; urgency=low
 
   * Initial release (Closes: #724568)
 
